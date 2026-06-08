@@ -1,0 +1,48 @@
+name: Preprocessing Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  preprocess:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas numpy scikit-learn joblib
+    
+    - name: Run preprocessing automation
+      run: |
+        python preprocessing/automate_Hildan-Kusto-Utomo.py \
+          --raw-path diabetes_raw/diabetes.csv \
+          --output-dir preprocessing/diabetes_preprocessing
+    
+    - name: Upload preprocessed dataset
+      uses: actions/upload-artifact@v4
+      with:
+        name: diabetes_preprocessed
+        path: preprocessing/diabetes_preprocessing/
+        retention-days: 30
+    
+    - name: Commit preprocessed data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add preprocessing/diabetes_preprocessing/
+        git diff --quiet && git diff --staged --quiet || \
+          git commit -m "Auto: Update preprocessed dataset"
+        git push
